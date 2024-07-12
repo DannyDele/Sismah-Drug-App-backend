@@ -8,6 +8,30 @@ const jwt = require('jsonwebtoken');
 
 
 
+
+
+// Function to generate a unique 6-digit numeric pharmacy ID
+const generatePharmacyId = async () => {
+    const min = 100000; // Minimum 6-digit number
+    const max = 999999; // Maximum 6-digit number
+    let newId;
+
+    do {
+        newId = `PHARM-${Math.floor(min + Math.random() * (max - min + 1))}`;
+        // Check if this ID already exists in your database or collection
+        const existingPharmacy = await Pharmacy.findOne({ pharmacyId: newId });
+        if (!existingPharmacy) {
+            break;
+        }
+    } while (true);
+
+    return newId;
+};
+
+
+
+
+
 // function to generate OTP
 const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -23,14 +47,15 @@ const EXPIRES = process.env.LOGIN_EXPIRES
 
 
 // Function to create/signup a pharmacy
-const createPharmacy = HandleAsync(async (req, res) => {
-    const { name, state, zone, city, email, phoneNumber, password, confirmPassword, userType } = req.body;
+const createPharmacy = HandleAsync(async (req, res, next) => {
+    const { name, state, city, email, phoneNumber, password, confirmPassword, userType } = req.body;
 
 
     //  check to see if pharmacy email exist
     const foundPharmacy = await Pharmacy.findOne({ email });
     if (foundPharmacy) {
-         throw new AppError('Pharmacy with that email already exist', 409)
+        return res.status(409).json({ error: 'Pharmacy with that email already exist!' });
+
 
     }
       
@@ -38,7 +63,8 @@ const createPharmacy = HandleAsync(async (req, res) => {
     // Check if passwords match
     if (password !== confirmPassword) {
         // return res.status(400).json({ error: 'Password and confirm password do not match' });
-        throw new AppError('Password and confirm password do not match', 403)
+        return res.status(403).json({ error: 'Password and confirm password do not match!' });
+
     }
 
     try {
@@ -47,9 +73,14 @@ const createPharmacy = HandleAsync(async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 12);
    
       
+    // Generate a unique pharmacyId
+        const pharmacyId = await generatePharmacyId();
+        console.log('Pharmacy Id:', pharmacyId);
+
+
 
         // Create a new pharmacy instance
-        const pharmacy = new Pharmacy({ name, state, zone, city, email, phoneNumber, password: hashedPassword, userType });
+        const pharmacy = new Pharmacy({ name, state, pharmacyId, zone:'Zone A', city, email, phoneNumber, password: hashedPassword, userType });
         
         // assign pharmacy role
         pharmacy.role = 'user';
@@ -70,24 +101,24 @@ const createPharmacy = HandleAsync(async (req, res) => {
         await pharmacy.save();
 
         // Send OTP email
-        await sendMail(
-            email,
-            'Your OTP Code',
-            `Hello ${name},\n\nYour OTP code is ${otp}. Use this to verify your account.`,
-            `<p>Hello ${name},</p><p>Your OTP code is <strong>${otp}</strong>. Use this to verify your account.</p>`
-        );
+        // await sendMail(
+        //     email,
+        //     'Your OTP Code',
+        //     `Hello ${name},\n\nYour OTP code is ${otp}. Use this to verify your account.`,
+        //     `<p>Hello ${name},</p><p>Your OTP code is <strong>${otp}</strong>. Use this to verify your account.</p>`
+        // );
 
         // Respond with success message and pharmacy data
         res.status(201).json({ msg: 'Pharmacy created successfully!', data: [pharmacy] });
     } catch (err) {
-        res.status(500).json({ error: 'Server error', err });
+        next(err); // Pass the error to the next error handler
         console.error('Server error:', err);
     }
 });
 
 
 // function to veryfy pharmacies one time password (OTP)
-const verifyOTP = HandleAsync(async (req, res) => {
+const verifyOTP = HandleAsync(async (req, res, next) => {
     const { email, otp } = req.body;
     try {
         const pharmacy = await Pharmacy.findOne({ email });
@@ -117,7 +148,7 @@ const verifyOTP = HandleAsync(async (req, res) => {
         pharmacy.otpExpires = undefined;
         await pharmacy.save();
     } catch (err) {
-        res.status(500).json({ error: 'Server error', err });
+        next(err)
         console.error('Server error:', err);
     }
 });

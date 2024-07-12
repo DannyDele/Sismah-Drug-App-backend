@@ -4,6 +4,35 @@ const AppError = require('../../../utils/AppError')
 const sendMail = require('../../../services/NodeMailer');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+
+
+
+// Generate unique user ID
+// Function to generate a unique 6-digit numeric user ID
+const generateUserId = async () => {
+    const min = 100000; // Minimum 6-digit number
+    const max = 999999; // Maximum 6-digit number
+    let newId;
+
+    do {
+        newId = `USR-${Math.floor(min + Math.random() * (max - min + 1))}`;
+        // Check if this ID already exists in your database or collection
+        const existingUser = await User.findOne({ userId: newId });
+        if (!existingUser) {
+            break;
+        }
+    } while (true);
+
+    return newId;
+};
+
+
+// // Generate unique pharmacy ID
+// const generatePharmacyId = () => {
+//     const pharmacyId = `PHARM-${Math.floor(100000 + Math.random() * 900000)}`;
+//     return pharmacyId;
+// };
 
 
 
@@ -20,10 +49,8 @@ const EXPIRES = process.env.LOGIN_EXPIRES
 
 
 
-
-
 // Function to create/signup a user
-const createUser = HandleAsync(async (req, res) => {
+const createUser = HandleAsync(async (req, res, next) => {
     const { firstName, lastName, username, email, phoneNumber, password, confirmPassword, userType } = req.body;
 
 
@@ -46,9 +73,15 @@ const createUser = HandleAsync(async (req, res) => {
         // Hash the password and assign it to the user
         const hashedPassword = await bcrypt.hash(password, 12);
 
+       // Generate a unique userId
+        const userId = await generateUserId();
+        console.log('User Id:', userId);
+
+
+         
 
         // Create a new user instance
-        const user = new User({ firstName, lastName, username, email, phoneNumber, password: hashedPassword, userType });
+        const user = new User({ firstName, lastName, userId, username, email, phoneNumber, password: hashedPassword, userType });
         
         // assign user role
         user.role = 'user';
@@ -68,25 +101,25 @@ const createUser = HandleAsync(async (req, res) => {
         // Save the user to the database
         await user.save();
 
-        // Send OTP email
-        await sendMail(
-            email,
-            'Your OTP Code',
-            `Hello ${firstName},\n\nYour OTP code is ${otp}. Use this to verify your account.`,
-            `<p>Hello ${firstName},</p><p>Your OTP code is <strong>${otp}</strong>. Use this to verify your account.</p>`
-        );
+        // // Send OTP email
+        // await sendMail(
+        //     email,
+        //     'Your OTP Code',
+        //     `Hello ${firstName},\n\nYour OTP code is ${otp}. Use this to verify your account.`,
+        //     `<p>Hello ${firstName},</p><p>Your OTP code is <strong>${otp}</strong>. Use this to verify your account.</p>`
+        // );
 
         // Respond with success message and user data
         res.status(201).json({ msg: 'User created successfully!', data: [user] });
     } catch (err) {
-        res.status(500).json({ error: 'Server error', err });
+        next(err); // Pass the error to the next error handler
         console.error('Server error:', err);
     }
 });
 
 
 // function to veryfy users one time password (OTP)
-const verifyOTP = HandleAsync(async (req, res) => {
+const verifyOTP = HandleAsync(async (req, res, next) => {
     const { email, otp } = req.body;
     try {
         const user = await User.findOne({ email });
@@ -98,6 +131,12 @@ const verifyOTP = HandleAsync(async (req, res) => {
         // Check if OTP is expired
         if (Date.now() > user.otpExpires) {
             return res.status(400).json({ error: 'OTP has expired' });
+        }
+
+        // check if user otp has already been verified
+        if (user.otpVerification === true) {
+            return res.status(400).json({ error: 'OTP already verified' });
+
         }
 
         // Compare the provided OTP with the hashed OTP
@@ -116,7 +155,7 @@ const verifyOTP = HandleAsync(async (req, res) => {
         user.otpExpires = undefined;
         await user.save();
     } catch (err) {
-        res.status(500).json({ error: 'Server error', err });
+        next(err)
         console.error('Server error:', err);
     }
 });
@@ -147,7 +186,7 @@ const signInUser = HandleAsync(async (req, res) => {
         // Respond with the token and user data
         res.status(200).json({ msg: 'Sign-in successful', access_token:token, data: [user] });
     } catch (err) {
-        res.status(500).json({ error: 'Server error', err });
+        next(err)
         console.error('Server error:', err);
     }
 });

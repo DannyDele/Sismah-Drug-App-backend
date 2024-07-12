@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const UserSchema = new Schema({
+    userId: {
+        type: String,
+        unique: true
+    },
     firstName:
     {
         type: String,
@@ -28,6 +32,9 @@ const UserSchema = new Schema({
         type:String,
         required: true,
         unique: true
+    },
+     profileImage: {
+        type: String, // Store the image path or URL
     },
     password:
     {
@@ -72,12 +79,10 @@ const UserSchema = new Schema({
       type: {
           type: String,
           enum: ['Point'],
-          required: true
       },
       coordinates:
       {
           type: [Number], 
-          required: true
       }
   }
 },

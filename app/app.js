@@ -4,8 +4,9 @@ const bodyParser = require('body-parser');
 const morgan  = require('morgan')
 // const corsOptions = require('../config/corsOptions')
 const cors = require('cors');
-const userRoute = require('../routes/v1/user/userRoute');
-const pharmacyRoute = require('../routes/v1/pharmacy/pharmacyRoute');
+const userRoute = require('../routes/v1/user/user');
+const pharmacyRoute = require('../routes/v1/pharmacy/pharmacy');
+const userProfileImageUploadRoute = require('../routes/v1/fileUpload/profileImage')
 
 // initialize the express app
 const app = express();
@@ -24,6 +25,8 @@ app.use(cors());
 // Routes
 app.use('/api/v1', userRoute);
 app.use('/api/v1', pharmacyRoute);
+
+app.use('/', userProfileImageUploadRoute)
 
 app.use('/home', (req, res) => {
     res.send('Home Page')

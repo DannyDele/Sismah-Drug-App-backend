@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const PharmacySchema = new Schema({
+    pharmacyId:
+    {
+        type: String,
+        unique: true
+    },
     name:
     {
         type: String,
@@ -75,7 +80,7 @@ const PharmacySchema = new Schema({
       // Reference to the store
        stores: [
         {
-            type: Schema.Types.ObjectId,
+            type: String,
             ref:'Store'
         }
     ],
