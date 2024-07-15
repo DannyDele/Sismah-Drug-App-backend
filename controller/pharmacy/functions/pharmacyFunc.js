@@ -1,6 +1,7 @@
 const Pharmacy = require('../../../model/pharmacy/Pharmacy');
 const Store = require('../../../model/pharmacy/Store');
 const Product = require('../../../model/pharmacy/Product');
+const Category = require('../../../model/pharmacy/Category');
 const HandleAsync = require('../../../utils/HandleAsync');
 const AppError = require('../../../utils/AppError');
 
@@ -46,6 +47,36 @@ const generateProductId = async () => {
 
 
 
+
+
+// fucntion to get all product category
+
+const getAllProductCategory = HandleAsync(async(req, res, next) => {
+   
+      try{
+         const categories = await Category.find({});
+
+    if (!categories) {
+        //   return res.status(404).json({ error: 'No categories found!' });
+            return next(new AppError('No categories found!', 404));
+
+          }
+          
+          res.status(200).json({ msg: 'Categories found!', data: [categories] });
+    }
+      catch (err) {
+          next(err);
+          console.log('Server error:', err);
+    }
+
+})
+
+
+
+
+
+
+
 // function to create a store for a pharmacy
 const createStore = HandleAsync(async (req, res, next) => {
     const { name, address, city, state, postalaCode, country, phoneNumber, operatingHours, createdBy } = req.body;
@@ -54,7 +85,9 @@ const createStore = HandleAsync(async (req, res, next) => {
     // Find the pharmacy
     const foundPharmacy = await Pharmacy.findOne({ pharmacyId } );
     if (!foundPharmacy) {
-         return res.status(404).json({ error: 'Pharmacy not found!' });
+        // return res.status(404).json({ error: 'Pharmacy not found!' });
+         return next(new AppError('Pharmacy not found!', 404));
+
 
         
     }
@@ -110,12 +143,22 @@ const createStore = HandleAsync(async (req, res, next) => {
 // Function to create products for a pharmacy
 const createProduct = HandleAsync(async (req, res, next) => {
     const { name, description, price, quantity, category, subcategory, manufacturer, expiryDate } = req.body;
-    const { storeId } = req.params;
+    const { storeId, categoryId } = req.params;
 
     // Find the store
     const foundStore = await Store.findOne({ storeId });
     if (!foundStore) {
-       return res.status(404).json({ error: 'Store not found!' });
+        // return res.status(404).json({ error: 'Store not found!' });
+        return next(new AppError('Store not found!', 404));
+
+    }
+
+    // Find a category
+    const foundCategory = await Category.findOne({ categoryId });
+    if (!foundCategory) {
+        // return res.status(404).json({ error: 'Category not found!' });
+        return next(new AppError('Category not found!', 404));
+
     }
 
     try {
@@ -144,16 +187,22 @@ const createProduct = HandleAsync(async (req, res, next) => {
             expiryDate,
             images:productImages,
             store: foundStore.storeId,
+            category: foundCategory.categoryId,
         });
 
-        foundStore.products.push(product.productId)
+        // associate product to the particular store
+        foundStore.products.push(product.productId);
+
+        // assocaite category to the particular product
+        foundCategory.products.push(product.productId)
 
         // Save the product and store to the database
         await product.save();
         await foundStore.save();
+        await foundCategory.save();
 
         // Respond with success message and product data
-        res.status(201).json({ msg: 'Product created successfully!', data: product });
+        res.status(201).json({ msg: 'Product created successfully!', data: [product] });
     } catch (err) {
         next(err)
         console.error('Server error:', err);
@@ -164,5 +213,6 @@ const createProduct = HandleAsync(async (req, res, next) => {
 
 module.exports = {
     createStore,
-    createProduct
+    createProduct,
+    getAllProductCategory,
 }

@@ -1,12 +1,15 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const morgan  = require('morgan')
+const morgan = require('morgan');
+const AppError = require('../utils/AppError');
 // const corsOptions = require('../config/corsOptions')
 const cors = require('cors');
+const superAdminRoute = require('../routes/v1/Super-Admin/supAdmin');
 const userRoute = require('../routes/v1/user/user');
 const pharmacyRoute = require('../routes/v1/pharmacy/pharmacy');
-const userProfileImageUploadRoute = require('../routes/v1/fileUpload/profileImage')
+const dispatchCompanyRoute = require('../routes/v1/dispatchCompany/dispatchCompany');
+const userProfileImageUploadRoute = require('../routes/v1/fileUpload/profileImage');
 
 // initialize the express app
 const app = express();
@@ -22,23 +25,66 @@ app.use(express.json());
 app.use(cors());
 
 
-// Routes
+// super admin routes
+app.use('/api/v1', superAdminRoute);
+
+
+
+// user routes
 app.use('/api/v1', userRoute);
+app.use('/api/v1', userProfileImageUploadRoute)
+
+
+// pharmacy routes
 app.use('/api/v1', pharmacyRoute);
 
-app.use('/', userProfileImageUploadRoute)
+
+// dispatch company routes
+app.use('/api/v1', dispatchCompanyRoute);
+
 
 app.use('/home', (req, res) => {
     res.send('Home Page')
 });
 
 
-// Error Handle Middleware
+
+
+// Catch all undefined routes and forward to error handler
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+
+// Global error handling middleware
 app.use((err, req, res, next) => {
   const { message = 'something went wrong', status = 500 } = err;
   res.status(status).send({ msg: message });
   console.log(err)
 });
+
+
+
+
+
+
+
+
+
+
+// app.use((err, req, res, next) => {
+//   err.statusCode = err.statusCode || 500;
+//   err.status = err.status || 'error';
+
+//   res.status(err.statusCode).json({
+//     status: err.status,
+//     message: err.message,
+//     error: err,
+//     stack: err.stack
+//   });
+//   console.error('Error:', err);
+// });
+
 
 
 module.exports = app;

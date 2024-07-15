@@ -1,22 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const { createUser, verifyOTP, signInUser } = require('../../../controller/user/auth/userAuth');
-const {getAuser, updateUser, getNearbyStores} = require('../../../controller/user/functions/userFunc') 
+const {isLoggedIn} =  require('../../../middleware/isLoggedIn')
+const { getAuser, updateUser, getNearbyStores, forgotPassword, resetPassword } = require('../../../controller/user/functions/userFunc');
 
-// user authentication routes
-router.post('/user', createUser);
-router.post('/verify-otp', verifyOTP);
-router.post('/user/sign-in', signInUser);
+// User authentication routes
+router.route('/user')
+    .post(createUser);
+
+router.route('/verify-otp')
+    .post(verifyOTP);
+
+router.route('/forgot-password')
+    .post(forgotPassword);
+
+router.route('/reset-password/:token')
+    .post(resetPassword);
+
+router.route('/user/sign-in')
+    .post(signInUser);
+
+// User function routes
+// router.get('/user/:userId', isLoggedIn, getAuser);
 
 
-// user fucntion routes
-// router.get('/nearby-stores/:userId', getNearbyPharmacies);
-router.get('/user/:userId', getAuser);
-router.get('/user/:userId/nearby-pharmacies', getNearbyStores);
-router.patch('/user/:userId', updateUser);
+router.route('/user/:userId')
+     .get(isLoggedIn, getAuser)
+    .patch(updateUser);
 
+router.route('/user/:userId/nearby-pharmacies')
+    .get(getNearbyStores);
 
 module.exports = router;
-
-
-

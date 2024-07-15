@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
 const sendMail = async (to, subject, text, html = '') => {
   try {
     const info = await transporter.sendMail({
-      from: 'SISMAH <' + process.env.EMAIL_USER + '>', // Replace with your sender details
+      from: 'MyMedics <' + process.env.EMAIL_USER + '>', // Replace with your sender details
       to,
       subject,
       text,
@@ -35,4 +35,24 @@ const sendMail = async (to, subject, text, html = '') => {
   }
 };
 
-module.exports = sendMail;
+const sendPasswordResetMail = async (to, subject, text, html = '', user) => {
+  try {
+    const info = await transporter.sendMail({
+      from: 'MyMedics <' + process.env.EMAIL_USER + '>', // Replace with your sender details
+      to,
+      subject,
+      text,
+      html,
+      user
+    });
+    console.log('Password Reset Link Sent: %s', info.messageId);
+  } catch (error) {
+    console.error('Error sending email:', error);
+    user.passwordResetToken = undefined;
+    user.passwordResetTokenExpires = undefined;
+    user.save({validateBeforeSave: false});
+  }
+
+};
+
+module.exports = { sendMail, sendPasswordResetMail };

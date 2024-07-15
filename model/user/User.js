@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const crypto = require('crypto');
+
 
 const UserSchema = new Schema({
     userId: {
@@ -20,6 +22,9 @@ const UserSchema = new Schema({
     {
         type:String,
         required: true
+    },
+    age: {
+        type: String
     },
     email:
     {
@@ -71,8 +76,18 @@ const UserSchema = new Schema({
          unique: true
 
     },
+     
+    passwordResetToken: {
+        type: String   
+       },
+    passwordChangedAt: {
+        type: Date
+    },    
+    passwordResetTokenExpires: {
+      type: Date
+  },
     
-
+    
     // store user location coordinates for geolocation
     location:
     {
@@ -89,6 +104,30 @@ const UserSchema = new Schema({
     {
         timestamps: true
     });
+
+
+
+
+// class method function to reset a users password
+UserSchema.methods.createResetPasswordToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    this.passwordResetTokenExpires = Date.now() + 10 * 60 * 1000;
+  console.log(resetToken, this.passwordResetToken);
+    return resetToken;
+}
+
+UserSchema.methods.isPasswordChanged = async function (JWTtimeStamp) {
+  if (this.passwordChangedAt) {
+    const pswdChangedTimeStamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+    console.log(pswdChangedTimeStamp, JWTtimeStamp);
+
+    return JWTtimeStamp < pswdChangedTimeStamp;
+  }
+  return false
+}
+
+
 
 UserSchema.index({ location: '2dsphere' }); // Index for geospatial queries
 

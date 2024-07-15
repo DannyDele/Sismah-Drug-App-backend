@@ -23,10 +23,6 @@ const productSchema = new Schema({
         type: Number,
         required: true
     },
-    category: {
-        type: String,
-        required: true
-    },
     subcategory: {
         type: String
     },
@@ -48,6 +44,11 @@ const productSchema = new Schema({
     store: {
         type: String,
         ref: 'Store',
+        required: true
+    },
+    category: {
+        type: String,
+        ref: 'Category',
         required: true
     }
 }, {
